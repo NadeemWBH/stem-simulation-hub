@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Open-Source STEM Simulation Hub</title>
+    <style>
+        /* CSS: Interior Design & Styling */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #f4f6f9;
+            color: #333;
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            width: 260px;
+            background-color: #1e293b;
+            color: #fff;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .sidebar h2 {
+            font-size: 1.2rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #38bdf8;
+            margin-bottom: 10px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .sidebar ul li a {
+            color: #cbd5e1;
+            text-decoration: none;
+            padding: 10px;
+            display: block;
+            border-radius: 6px;
+            transition: 0.2s;
+        }
+
+        .sidebar ul li a:hover, .sidebar ul li a.active {
+            background-color: #334155;
+            color: #fff;
+        }
+
+        /* Main Workspace Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Top Navbar */
+        .navbar {
+            height: 70px;
+            background-color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 30px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .lang-btn {
+            background-color: #38bdf8;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+        .lang-btn:hover {
+            background-color: #0ea5e9;
+        }
+
+        /* Simulator Container Layout */
+        .dashboard-grid {
+            flex: 1;
+            padding: 30px;
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 25px;
+            overflow: auto;
+        }
+
+        .canvas-card {
+            background-color: #fff;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        canvas {
+            background-color: #0f172a;
+            border-radius: 8px;
+            width: 100%;
+            height: 400px;
+        }
+
+        .controls-card {
+            background-color: #fff;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-group label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #475569;
+        }
+
+        .control-group input[type="range"] {
+            width: 100%;
+            accent-color: #38bdf8;
+        }
+
+        .launch-btn {
+            background-color: #10b981;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .launch-btn:hover {
+            background-color: #059669;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HTML: The Layout Architecture -->
+    <div class="sidebar">
+        <h2 id="logo-text">STEM Hub</h2>
+        <ul>
+            <li><a href="#" class="active" id="nav-physics">Physics Engine</a></li>
+            <li><a href="#" id="nav-math">Math Vectors</a></li>
+            <li><a href="#" id="nav-chemistry">Chemistry Bonds</a></li>
+            <li><a href="#" id="nav-premium">Premium Resources</a></li>
+        </ul>
+    </div>
+
+    <div class="main-content">
+        <div class="navbar">
+            <h1 id="main-title">Projectile Motion Simulator</h1>
+            <button class="lang-btn" id="lang-toggle" onclick="toggleLanguage()">العربية</button>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Left Side: Interactive Screen -->
+            <div class="canvas-card">
+                <canvas id="simCanvas" width="800" height="400"></canvas>
+            </div>
+
+            <!-- Right Side: Live Input Values -->
+            <div class="controls-card">
+                <h3 id="panel-title">Simulation Parameters</h3>
+                
+                <div class="control-group">
+                    <label id="lbl-angle">Launch Angle: <span id="val-angle">45</span>°</label>
+                    <input type="range" id="input-angle" min="10" max="85" value="45" oninput="updateValues()">
+                </div>
+
+                <div class="control-group">
+                    <label id="lbl-velocity">Initial Velocity: <span id="val-velocity">40</span> m/s</label>
+                    <input type="range" id="input-velocity" min="10" max="80" value="40" oninput="updateValues()">
+                </div>
+
+                <button class="launch-btn" id="btn-fire" onclick="startSimulation()">Fire Projectile</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript: The Logic and Physics Computations -->
+    <script>
+        const canvas = document.getElementById("simCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Physics variables
+        let angle = 45;
+        let velocity = 40;
+        const g = 9.81; // Gravity constant
+        let posX = 50, posY = 350;
+        let animationFrameId;
+        let t = 0;
+        let isRunning = false;
+
+        // Interactive UI Update Logic
+        function updateValues() {
+            angle = document.getElementById("input-angle").value;
+            velocity = document.getElementById("input-velocity").value;
+            
+            document.getElementById("val-angle").innerText = angle;
+            document.getElementById("val-velocity").innerText = velocity;
+        }
+
+        // Draws the static base layout of the simulator grid
+        function drawScene() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Ground level line
+            ctx.strokeStyle = "#475569";
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(0, 350);
+            ctx.lineTo(canvas.width, 350);
+            ctx.stroke();
+        }
+
+        function startSimulation() {
+            if (isRunning) cancelAnimationFrame(animationFrameId);
+            isRunning = true;
+            t = 0;
+            animate();
+        }
+
+        // Modular math algorithm looping fluidly to simulate time-steps
+        function animate() {
+            drawScene();
+
+            // Formula translations: Convert degrees to radians
+            let rad = (angle * Math.PI) / 180;
+
+            // Classical kinematic equations: x = v * t * cos(θ), y = v * t * sin(θ) - 0.5 * g * t^2
+            let currentX = 50 + (velocity * t * Math.cos(rad));
+            let currentY = 350 - ((velocity * t * Math.sin(rad)) - (0.5 * g * t * t));
+
+            // Draw Projectile Ball
+            ctx.fillStyle = "#38bdf8";
+            ctx.beginPath();
+            ctx.arc(currentX, currentY, 8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Check if ball hits the ground layout boundary
+            if (currentY < 350 && currentX < canvas.width) {
+                t += 0.15; // Step time forward
+                animationFrameId = requestAnimationFrame(animate);
+            } else {
+                isRunning = false;
+            }
+        }
+
+        // Language Translation State Management
+        let currentLang = 'en';
+        function toggleLanguage() {
+            if (currentLang === 'en') {
+                currentLang = 'ar';
+                document.getElementById("lang-toggle").innerText = "English";
+                document.getElementById("main-title").innerText = "محاكي المقذوفات الفيزيائي";
+                document.getElementById("panel-title").innerText = "خصائص المحاكاة";
+                document.getElementById("btn-fire").innerText = "إطلاق القذيفة";
+                document.getElementById("nav-physics").innerText = "محرك الفيزياء";
+                document.getElementById("nav-math").innerText = "المتجهات الرياضية";
+                document.getElementById("nav-chemistry").innerText = "الروابط الكيميائية";
+                document.getElementById("nav-premium").innerText = "المصادر المتميزة";
+                document.body.style.direction = "rtl";
+            } else {
+                currentLang = 'en';
+                document.getElementById("lang-toggle").innerText = "العربية";
+                document.getElementById("main-title").innerText = "Projectile Motion Simulator";
+                document.getElementById("panel-title").innerText = "Simulation Parameters";
+                document.getElementById("btn-fire").innerText = "Fire Projectile";
+                document.getElementById("nav-physics").innerText = "Physics Engine";
+                document.getElementById("nav-math").innerText = "Math Vectors";
+                document.getElementById("nav-chemistry").innerText = "Chemistry Bonds";
+                document.getElementById("nav-premium").innerText = "Premium Resources";
+                document.body.style.direction = "ltr";
+            }
+        }
+
+        // Initialize scene view setup instantly on startup
+        drawScene();
+    </script>
+</body>
+</html>
