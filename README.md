@@ -67,3 +67,6 @@ stem-simulation-hub/
 │
 ├── index.html          # Core DOM architecture, layout modules, and localized text states
 └── README.md           # Technical documentation and system deployment blueprint
+
+## ?? Author & Founder
+* **Nadeem Wael** � Founder / Lead Systems Developer
