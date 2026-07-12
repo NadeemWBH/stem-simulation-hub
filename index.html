@@ -5,308 +5,277 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Open-Source STEM Simulation Hub</title>
     <style>
-        /* CSS: Interior Design & Styling */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-color: #38bdf8;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        [dir="rtl"] {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         body {
-            display: flex;
-            height: 100vh;
-            background-color: #f4f6f9;
-            color: #333;
-        }
-
-        /* Sidebar Styling */
-        .sidebar {
-            width: 260px;
-            background-color: #1e293b;
-            color: #fff;
-            padding: 20px;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: system-ui, -apple-system, sans-serif;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            min-height: 100vh;
         }
 
-        .sidebar h2 {
-            font-size: 1.2rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #38bdf8;
-            margin-bottom: 10px;
-        }
-
-        .sidebar ul {
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .sidebar ul li a {
-            color: #cbd5e1;
-            text-decoration: none;
-            padding: 10px;
-            display: block;
-            border-radius: 6px;
-            transition: 0.2s;
-        }
-
-        .sidebar ul li a:hover, .sidebar ul li a.active {
-            background-color: #334155;
-            color: #fff;
-        }
-
-        /* Main Workspace Content */
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        /* Top Navbar */
-        .navbar {
-            height: 70px;
-            background-color: #fff;
+        header {
+            background-color: var(--card-bg);
+            padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0 30px;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid #334155;
         }
 
-        .lang-btn {
-            background-color: #38bdf8;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
+        .nav-tabs {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            padding: 0.5rem 1rem;
             cursor: pointer;
+            border-radius: 0.375rem;
             font-weight: 600;
-            transition: 0.2s;
+            transition: all 0.2s;
         }
 
-        .lang-btn:hover {
-            background-color: #0ea5e9;
+        .tab-btn.active, .tab-btn:hover {
+            background-color: #334155;
+            color: var(--accent-color);
+            border-color: var(--accent-color);
         }
 
-        /* Simulator Container Layout */
-        .dashboard-grid {
+        .lang-toggle {
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+            border: none;
+            padding: 0.5rem 1rem;
+            font-weight: bold;
+            border-radius: 0.375rem;
+            cursor: pointer;
+        }
+
+        main {
             flex: 1;
-            padding: 30px;
-            display: grid;
-            grid-template-columns: 1fr 320px;
-            gap: 25px;
-            overflow: auto;
+            display: flex;
+            padding: 2rem;
+            gap: 2rem;
         }
 
-        .canvas-card {
-            background-color: #fff;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
-            padding: 20px;
+        .simulation-container {
+            flex: 2;
+            background-color: var(--card-bg);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            align-items: center;
         }
 
         canvas {
-            background-color: #0f172a;
-            border-radius: 8px;
-            width: 100%;
-            height: 400px;
+            background-color: #0b0f19;
+            border: 2px solid #334155;
+            border-radius: 0.5rem;
+            max-width: 100%;
         }
 
-        .controls-card {
-            background-color: #fff;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
+        .control-panel {
+            flex: 1;
+            background-color: var(--card-bg);
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            box-sizing: border-box;
         }
 
         .control-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
+            margin-bottom: 1.5rem;
         }
 
-        .control-group label {
-            font-weight: 600;
-            font-size: 0.9rem;
-            color: #475569;
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+            font-weight: 500;
         }
 
-        .control-group input[type="range"] {
+        input[type="range"] {
             width: 100%;
-            accent-color: #38bdf8;
+            accent-color: var(--accent-color);
         }
 
-        .launch-btn {
-            background-color: #10b981;
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .launch-btn:hover {
-            background-color: #059669;
+        .data-display {
+            background-color: #0b0f19;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            border: 1px solid #334155;
+            font-family: monospace;
+            margin-top: 1rem;
         }
     </style>
 </head>
 <body>
 
-    <!-- HTML: The Layout Architecture -->
-    <div class="sidebar">
-        <h2 id="logo-text">STEM Hub</h2>
-        <ul>
-            <li><a href="#" class="active" id="nav-physics">Physics Engine</a></li>
-            <li><a href="#" id="nav-math">Math Vectors</a></li>
-            <li><a href="#" id="nav-chemistry">Chemistry Bonds</a></li>
-            <li><a href="#" id="nav-premium">Premium Resources</a></li>
-        </ul>
-    </div>
+    <header>
+        <div class="nav-tabs">
+            <button class="tab-btn" id="tab-projectile" onclick="switchModule('projectile')">Projectile Motion</button>
+            <button class="tab-btn active" id="tab-vectors" onclick="switchModule('vectors')">Math Vectors</button>
+        </div>
+        <button class="lang-toggle" onclick="toggleLanguage()">Language: EN</button>
+    </header>
 
-    <div class="main-content">
-        <div class="navbar">
-            <h1 id="main-title">Projectile Motion Simulator</h1>
-            <button class="lang-btn" id="lang-toggle" onclick="toggleLanguage()">العربية</button>
+    <main id="main-layout">
+        <div class="simulation-container">
+            <h2 id="sim-title">Vector Addition & Resolution Engine</h2>
+            <canvas id="simCanvas" width="600" height="400"></canvas>
         </div>
 
-        <div class="dashboard-grid">
-            <!-- Left Side: Interactive Screen -->
-            <div class="canvas-card">
-                <canvas id="simCanvas" width="800" height="400"></canvas>
-            </div>
-
-            <!-- Right Side: Live Input Values -->
-            <div class="controls-card">
-                <h3 id="panel-title">Simulation Parameters</h3>
-                
-                <div class="control-group">
-                    <label id="lbl-angle">Launch Angle: <span id="val-angle">45</span>°</label>
-                    <input type="range" id="input-angle" min="10" max="85" value="45" oninput="updateValues()">
-                </div>
-
-                <div class="control-group">
-                    <label id="lbl-velocity">Initial Velocity: <span id="val-velocity">40</span> m/s</label>
-                    <input type="range" id="input-velocity" min="10" max="80" value="40" oninput="updateValues()">
-                </div>
-
-                <button class="launch-btn" id="btn-fire" onclick="startSimulation()">Fire Projectile</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- JavaScript: The Logic and Physics Computations -->
-    <script>
-        const canvas = document.getElementById("simCanvas");
-        const ctx = canvas.getContext("2d");
-
-        // Physics variables
-        let angle = 45;
-        let velocity = 40;
-        const g = 9.81; // Gravity constant
-        let posX = 50, posY = 350;
-        let animationFrameId;
-        let t = 0;
-        let isRunning = false;
-
-        // Interactive UI Update Logic
-        function updateValues() {
-            angle = document.getElementById("input-angle").value;
-            velocity = document.getElementById("input-velocity").value;
+        <div class="control-panel">
+            <h3 id="controls-title">Vector Parameters</h3>
             
-            document.getElementById("val-angle").innerText = angle;
-            document.getElementById("val-velocity").innerText = velocity;
+            <div class="control-group">
+                <label id="label-mag">Magnitude (Length): <span id="val-mag">100</span></label>
+                <input type="range" id="input-mag" min="10" max="200" value="100" oninput="updateVector()">
+            </div>
+
+            <div class="control-group">
+                <label id="label-angle">Angle (°): <span id="val-angle">45</span>°</label>
+                <input type="range" id="input-angle" min="0" max="360" value="45" oninput="updateVector()">
+            </div>
+
+            <div class="data-display">
+                <div id="out-x">X-Component (Horizontal): 70.71</div>
+                <div id="out-y">Y-Component (Vertical): 70.71</div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let currentLang = 'en';
+        let currentModule = 'vectors';
+
+        const localization = {
+            en: {
+                proj: "Projectile Motion",
+                vec: "Math Vectors",
+                title: "Vector Addition & Resolution Engine",
+                ctrlTitle: "Vector Parameters",
+                mag: "Magnitude (Length): ",
+                angle: "Angle (°): ",
+                compX: "X-Component (Horizontal): ",
+                compY: "Y-Component (Vertical): "
+            },
+            ar: {
+                proj: "حركة المقذوفات",
+                vec: "المتجهات الرياضية",
+                title: "محرك جمع وتحليل المتجهات",
+                ctrlTitle: "خصائص المتجه",
+                mag: "المقدار (الطول): ",
+                angle: "الزاوية (°): ",
+                compX: "المركبة الأفقية (X): ",
+                compY: "المركبة الرأسية (Y): "
+            }
+        };
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'ar' : 'en';
+            document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+            document.querySelector('.lang-toggle').innerText = currentLang === 'en' ? 'Language: EN' : 'اللغة: AR';
+            
+            document.getElementById('tab-projectile').innerText = localization[currentLang].proj;
+            document.getElementById('tab-vectors').innerText = localization[currentLang].vec;
+            document.getElementById('sim-title').innerText = localization[currentLang].title;
+            document.getElementById('controls-title').innerText = localization[currentLang].ctrlTitle;
+            
+            updateVector();
         }
 
-        // Draws the static base layout of the simulator grid
-        function drawScene() {
+        function switchModule(moduleName) {
+            currentModule = moduleName;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tab-${moduleName}`).classList.add('active');
+            // Logic to switch math environments goes here
+        }
+
+        // --- Core Canvas Vector Math Logic ---
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function updateVector() {
+            const mag = parseFloat(document.getElementById('input-mag').value);
+            const angleDeg = parseFloat(document.getElementById('input-angle').value);
+            
+            document.getElementById('val-mag').innerText = mag;
+            document.getElementById('val-angle').innerText = angleDeg;
+
+            // Convert angle to radians for native JS Math operations
+            const angleRad = angleDeg * (Math.PI / 180);
+            
+            // Calculate components
+            const compX = mag * Math.cos(angleRad);
+            const compY = mag * Math.sin(angleRad);
+
+            document.getElementById('out-x').innerText = `${localization[currentLang].compX}${compX.toFixed(2)}`;
+            document.getElementById('out-y').innerText = `${localization[currentLang].compY}${compY.toFixed(2)}`;
+
+            drawVector(compX, compY);
+        }
+
+        function drawVector(x, y) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            // Ground level line
-            ctx.strokeStyle = "#475569";
+            
+            const originX = canvas.width / 2;
+            const originY = canvas.height / 2;
+
+            // Draw cartesian grid axes
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(0, originY); ctx.lineTo(canvas.width, originY);
+            ctx.moveTo(originX, 0); ctx.lineTo(originX, canvas.height);
+            ctx.stroke();
+
+            // Draw Component X line
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(originX, originY);
+            ctx.lineTo(originX + x, originY);
+            ctx.stroke();
+
+            // Draw Component Y line
+            ctx.strokeStyle = '#22c55e';
+            ctx.beginPath();
+            ctx.moveTo(originX + x, originY);
+            ctx.lineTo(originX + x, originY - y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Draw primary resultant vector arrow
+            ctx.strokeStyle = '#38bdf8';
             ctx.lineWidth = 4;
             ctx.beginPath();
-            ctx.moveTo(0, 350);
-            ctx.lineTo(canvas.width, 350);
+            ctx.moveTo(originX, originY);
+            ctx.lineTo(originX + x, originY - y);
             ctx.stroke();
         }
 
-        function startSimulation() {
-            if (isRunning) cancelAnimationFrame(animationFrameId);
-            isRunning = true;
-            t = 0;
-            animate();
-        }
-
-        // Modular math algorithm looping fluidly to simulate time-steps
-        function animate() {
-            drawScene();
-
-            // Formula translations: Convert degrees to radians
-            let rad = (angle * Math.PI) / 180;
-
-            // Classical kinematic equations: x = v * t * cos(θ), y = v * t * sin(θ) - 0.5 * g * t^2
-            let currentX = 50 + (velocity * t * Math.cos(rad));
-            let currentY = 350 - ((velocity * t * Math.sin(rad)) - (0.5 * g * t * t));
-
-            // Draw Projectile Ball
-            ctx.fillStyle = "#38bdf8";
-            ctx.beginPath();
-            ctx.arc(currentX, currentY, 8, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Check if ball hits the ground layout boundary
-            if (currentY < 350 && currentX < canvas.width) {
-                t += 0.15; // Step time forward
-                animationFrameId = requestAnimationFrame(animate);
-            } else {
-                isRunning = false;
-            }
-        }
-
-        // Language Translation State Management
-        let currentLang = 'en';
-        function toggleLanguage() {
-            if (currentLang === 'en') {
-                currentLang = 'ar';
-                document.getElementById("lang-toggle").innerText = "English";
-                document.getElementById("main-title").innerText = "محاكي المقذوفات الفيزيائي";
-                document.getElementById("panel-title").innerText = "خصائص المحاكاة";
-                document.getElementById("btn-fire").innerText = "إطلاق القذيفة";
-                document.getElementById("nav-physics").innerText = "محرك الفيزياء";
-                document.getElementById("nav-math").innerText = "المتجهات الرياضية";
-                document.getElementById("nav-chemistry").innerText = "الروابط الكيميائية";
-                document.getElementById("nav-premium").innerText = "المصادر المتميزة";
-                document.body.style.direction = "rtl";
-            } else {
-                currentLang = 'en';
-                document.getElementById("lang-toggle").innerText = "العربية";
-                document.getElementById("main-title").innerText = "Projectile Motion Simulator";
-                document.getElementById("panel-title").innerText = "Simulation Parameters";
-                document.getElementById("btn-fire").innerText = "Fire Projectile";
-                document.getElementById("nav-physics").innerText = "Physics Engine";
-                document.getElementById("nav-math").innerText = "Math Vectors";
-                document.getElementById("nav-chemistry").innerText = "Chemistry Bonds";
-                document.getElementById("nav-premium").innerText = "Premium Resources";
-                document.body.style.direction = "ltr";
-            }
-        }
-
-        // Initialize scene view setup instantly on startup
-        drawScene();
+        // Initialize frame on mount
+        updateVector();
     </script>
 </body>
 </html>
