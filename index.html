@@ -7,7 +7,31 @@
 </head>
 <body>
     <div class="workspace" id="workspace" data-module="truss">
-        <!-- Layout Architecture to be added -->
+        
+    <header class="toolbar">
+        <div class="toolbar-left">
+            <span class="brand">STEM Sim Hub</span>
+            <div class="nav-tabs">
+                <button class="tab-btn" id="tab-projectile">Projectile Motion</button>
+                <button class="tab-btn" id="tab-vectors">Math Vectors</button>
+                <button class="tab-btn active" id="tab-truss">Truss Simulator</button>
+            </div>
+        </div>
+    </header>
+    <div class="truss-layout">
+        <aside class="tool-sidebar" id="toolSidebar">
+            <span class="tool-section-label">Build</span>
+            <button class="tool-btn active" data-tool="node">? Add Node</button>
+            <button class="tool-btn" data-tool="beam">? Add Beam</button>
+        </aside>
+        <div class="canvas-wrap">
+            <canvas id="trussCanvas"></canvas>
+        </div>
+        <aside class="inspector-panel empty-state" id="inspectorPanel">
+            <div class="inspector-header"><h3>Inspector</h3></div>
+            <div id="inspectorBody"></div>
+        </aside>
+    </div>
     </div>
 </body>
 </html>
