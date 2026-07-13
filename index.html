@@ -330,12 +330,12 @@
             }
         };
 
-        function createNode(id, x, y, label = 'N', support = 'free', load = 0) {
-            return { id, x, y, label, support, load };
+        function createNode(id, x, y, label = 'N', support = 'free', loadX = 0, loadY = 0) {
+            return { id, x, y, label, support, loadX, loadY, load: loadY };
         }
 
-        function createMember(id, a, b, section = 'L2x2x1/8', material = 'Steel') {
-            return { id, a, b, section, material };
+        function createMember(id, a, b, section = 'L2x2x1/8', material = 'Steel', area = 1.2, allowableStress = 250) {
+            return { id, a, b, section, material, area, allowableStress, force: 0, stress: 0, utilization: 0, status: 'UNEVALUATED' };
         }
 
         function getNodeById(id) {
@@ -352,15 +352,16 @@
             state.selected = null;
             state.pendingNode = null;
             state.analysis = { summary: 'Ready for a new layout', members: [] };
+            renderAnalysis();
             render();
             updateInspectionPanel();
         }
 
         function loadExample() {
             state.nodes = [
-                createNode('n1', 180, 430, 'A', 'pin', 0),
-                createNode('n2', 520, 430, 'B', 'roller', 0),
-                createNode('n3', 350, 220, 'C', 'free', -8)
+                createNode('n1', 180, 430, 'A', 'pin', 0, 0),
+                createNode('n2', 520, 430, 'B', 'roller', 0, 0),
+                createNode('n3', 350, 220, 'C', 'free', 0, -8)
             ];
             state.members = [
                 createMember('m1', 'n1', 'n2'),
@@ -407,6 +408,7 @@
             for (const member of state.members) {
                 const a = getNodeById(member.a);
                 const b = getNodeById(member.b);
+                if (!a || !b) continue;
                 const dx = b.x - a.x;
                 const dy = b.y - a.y;
                 const px = point.x - a.x;
@@ -482,20 +484,175 @@
             }
         }
 
-        function analyzeTruss() {
-            const totalLoad = state.nodes.reduce((sum, node) => sum + (Number(node.load) || 0), 0);
-            const summary = `${state.nodes.length} nodes · ${state.members.length} members · Total load ${Math.abs(totalLoad).toFixed(1)} kN`;
-            const memberStats = state.members.map(member => {
-                const a = getNodeById(member.a);
-                const b = getNodeById(member.b);
-                if (!a || !b) return null;
-                const length = Math.hypot(b.x - a.x, b.y - a.y).toFixed(1);
-                const force = Math.max(4, Math.abs(totalLoad) + Number(length) / 10).toFixed(1);
-                const type = (b.y < a.y) ? 'Compression' : 'Tension';
-                return { id: member.id, length, force, type };
-            }).filter(Boolean);
-            state.analysis = { summary, members: memberStats };
+        function gaussianElimination(A, B) {
+            const n = B.length;
+            const aug = A.map((row, idx) => [...row, B[idx]]);
+
+            for (let i = 0; i < n; i += 1) {
+                let pivotRow = i;
+                let pivotValue = Math.abs(aug[i][i]);
+                for (let r = i + 1; r < n; r += 1) {
+                    if (Math.abs(aug[r][i]) > pivotValue) {
+                        pivotValue = Math.abs(aug[r][i]);
+                        pivotRow = r;
+                    }
+                }
+
+                if (pivotValue < 1e-10) {
+                    return null;
+                }
+
+                if (pivotRow !== i) {
+                    [aug[i], aug[pivotRow]] = [aug[pivotRow], aug[i]];
+                }
+
+                for (let r = i + 1; r < n; r += 1) {
+                    const factor = aug[r][i] / aug[i][i];
+                    if (Math.abs(factor) < 1e-12) continue;
+                    for (let c = i; c <= n; c += 1) {
+                        aug[r][c] -= factor * aug[i][c];
+                    }
+                }
+            }
+
+            const solution = Array(n).fill(0);
+            for (let i = n - 1; i >= 0; i -= 1) {
+                let sum = aug[i][n];
+                for (let j = i + 1; j < n; j += 1) {
+                    sum -= aug[i][j] * solution[j];
+                }
+                if (Math.abs(aug[i][i]) < 1e-10) {
+                    return null;
+                }
+                solution[i] = sum / aug[i][i];
+            }
+            return solution;
+        }
+
+        function solveStructure() {
+            const nodeCount = state.nodes.length;
+            if (nodeCount === 0) {
+                state.analysis = { summary: 'No nodes defined', members: [] };
+                renderAnalysis();
+                return;
+            }
+
+            const rows = 2 * nodeCount;
+            const cols = rows;
+            const A = Array.from({ length: rows }, () => Array(cols).fill(0));
+            const B = Array(rows).fill(0);
+            const variables = [];
+            const variablesByKey = new Map();
+
+            state.members.forEach(member => {
+                const key = `member:${member.id}`;
+                variables.push({ type: 'member', memberId: member.id });
+                variablesByKey.set(key, variables.length - 1);
+            });
+
+            state.nodes.forEach(node => {
+                if (node.support === 'pin') {
+                    variables.push({ type: 'reaction', nodeId: node.id, direction: 'x' });
+                    variables.push({ type: 'reaction', nodeId: node.id, direction: 'y' });
+                } else if (node.support === 'roller') {
+                    variables.push({ type: 'reaction', nodeId: node.id, direction: 'y' });
+                }
+            });
+
+            if (variables.length > cols) {
+                state.analysis = { summary: 'System is overdetermined for the current node layout', members: [] };
+                renderAnalysis();
+                return;
+            }
+
+            state.nodes.forEach((node, nodeIndex) => {
+                const rowX = nodeIndex * 2;
+                const rowY = rowX + 1;
+                B[rowX] = -(Number(node.loadX) || 0);
+                B[rowY] = -(Number(node.loadY) || 0);
+
+                const supportReactions = [];
+                if (node.support === 'pin') {
+                    supportReactions.push({ direction: 'x', variable: { type: 'reaction', nodeId: node.id, direction: 'x' } });
+                    supportReactions.push({ direction: 'y', variable: { type: 'reaction', nodeId: node.id, direction: 'y' } });
+                } else if (node.support === 'roller') {
+                    supportReactions.push({ direction: 'y', variable: { type: 'reaction', nodeId: node.id, direction: 'y' } });
+                }
+
+                supportReactions.forEach(reaction => {
+                    const idx = variables.findIndex(item => item.type === reaction.variable.type && item.nodeId === reaction.variable.nodeId && item.direction === reaction.variable.direction);
+                    if (idx >= 0) {
+                        A[rowX][idx] = reaction.direction === 'x' ? 1 : 0;
+                        A[rowY][idx] = reaction.direction === 'y' ? 1 : 0;
+                    }
+                });
+            });
+
+            state.members.forEach(member => {
+                const start = getNodeById(member.a);
+                const end = getNodeById(member.b);
+                if (!start || !end) return;
+
+                const dx = end.x - start.x;
+                const dy = end.y - start.y;
+                const length = Math.hypot(dx, dy);
+                if (length < 1e-6) {
+                    return;
+                }
+
+                const c = dx / length;
+                const s = dy / length;
+                const memberCol = variables.findIndex(item => item.type === 'member' && item.memberId === member.id);
+                if (memberCol < 0) return;
+
+                const startNodeIndex = state.nodes.findIndex(node => node.id === start.id);
+                const endNodeIndex = state.nodes.findIndex(node => node.id === end.id);
+
+                if (startNodeIndex >= 0) {
+                    A[startNodeIndex * 2][memberCol] += -c;
+                    A[startNodeIndex * 2 + 1][memberCol] += -s;
+                }
+                if (endNodeIndex >= 0) {
+                    A[endNodeIndex * 2][memberCol] += c;
+                    A[endNodeIndex * 2 + 1][memberCol] += s;
+                }
+            });
+
+            const solution = gaussianElimination(A, B);
+            if (!solution) {
+                state.analysis = { summary: 'Solver failed to converge', members: [] };
+                renderAnalysis();
+                return;
+            }
+
+            state.members.forEach(member => {
+                const memberCol = variables.findIndex(item => item.type === 'member' && item.memberId === member.id);
+                const force = solution[memberCol] ?? 0;
+                member.force = force;
+                member.stress = (Number(member.area) > 0 ? force / Number(member.area) : 0);
+                member.utilization = Math.abs(member.stress) / Math.max(Number(member.allowableStress) || 1, 1e-9);
+                member.status = member.utilization > 1.0 ? 'FAILURE' : 'SAFE';
+            });
+
+            const failed = state.members.filter(member => member.status === 'FAILURE').length;
+            const summary = `${state.nodes.length} nodes · ${state.members.length} members · ${failed} member(s) beyond allowable stress`;
+            state.analysis = {
+                summary,
+                members: state.members.map(member => ({
+                    id: member.id,
+                    force: member.force.toFixed(2),
+                    stress: member.stress.toFixed(2),
+                    utilization: member.utilization.toFixed(2),
+                    status: member.status
+                }))
+            };
             renderAnalysis();
+            render();
+            updateInspectionPanel();
+        }
+
+        function analyzeTruss() {
+            solveStructure();
         }
 
         function renderAnalysis() {
@@ -508,7 +665,7 @@
             state.analysis.members.forEach(member => {
                 const item = document.createElement('div');
                 item.className = 'stat-item';
-                item.innerHTML = `<span>${member.id}</span><strong>${member.force} kN ${member.type}</strong>`;
+                item.innerHTML = `<span>${member.id}</span><strong>${member.force} kN · ${member.status}</strong>`;
                 analysisSummary.appendChild(item);
             });
         }
@@ -541,8 +698,11 @@
                                 <option value="free" ${node.support === 'free' ? 'selected' : ''}>Free</option>
                             </select>
                         </label>
-                        <label>Load (kN)
-                            <input id="nodeLoad" type="number" step="0.5" value="${node.load}" />
+                        <label>Load X (kN)
+                            <input id="nodeLoadX" type="number" step="0.5" value="${node.loadX}" />
+                        </label>
+                        <label>Load Y (kN)
+                            <input id="nodeLoadY" type="number" step="0.5" value="${node.loadY}" />
                         </label>
                     </div>
                 `;
@@ -553,18 +713,28 @@
                 });
                 inspectionContent.querySelector('#nodeX').addEventListener('input', (event) => {
                     node.x = Number(event.target.value);
+                    analyzeTruss();
                     render();
                 });
                 inspectionContent.querySelector('#nodeY').addEventListener('input', (event) => {
                     node.y = Number(event.target.value);
+                    analyzeTruss();
                     render();
                 });
                 inspectionContent.querySelector('#nodeSupport').addEventListener('change', (event) => {
                     node.support = event.target.value;
+                    analyzeTruss();
                     render();
                 });
-                inspectionContent.querySelector('#nodeLoad').addEventListener('input', (event) => {
-                    node.load = Number(event.target.value);
+                inspectionContent.querySelector('#nodeLoadX').addEventListener('input', (event) => {
+                    node.loadX = Number(event.target.value);
+                    node.load = node.loadY;
+                    analyzeTruss();
+                    render();
+                });
+                inspectionContent.querySelector('#nodeLoadY').addEventListener('input', (event) => {
+                    node.loadY = Number(event.target.value);
+                    node.load = node.loadY;
                     analyzeTruss();
                     render();
                 });
@@ -583,6 +753,12 @@
                         <label>Material
                             <input id="memberMaterial" value="${member.material}" />
                         </label>
+                        <label>Area (in²)
+                            <input id="memberArea" type="number" step="0.01" value="${member.area}" />
+                        </label>
+                        <label>Allowable Stress (ksi)
+                            <input id="memberAllowable" type="number" step="0.1" value="${member.allowableStress}" />
+                        </label>
                         <label>Start Node
                             <select id="memberA">
                                 ${state.nodes.map(node => `<option value="${node.id}" ${member.a === node.id ? 'selected' : ''}>${node.label}</option>`).join('')}
@@ -594,6 +770,15 @@
                             </select>
                         </label>
                     </div>
+                    <div class="panel-card">
+                        <h3>Calculated Values</h3>
+                        <div class="stat-list">
+                            <div class="stat-item"><span>Force</span><strong>${member.force.toFixed(2)} kN</strong></div>
+                            <div class="stat-item"><span>Stress</span><strong>${member.stress.toFixed(2)} ksi</strong></div>
+                            <div class="stat-item"><span>Utilization</span><strong>${member.utilization.toFixed(2)}</strong></div>
+                            <div class="stat-item"><span>Status</span><strong>${member.status}</strong></div>
+                        </div>
+                    </div>
                 `;
 
                 inspectionContent.querySelector('#memberSection').addEventListener('input', (event) => {
@@ -602,6 +787,16 @@
                 });
                 inspectionContent.querySelector('#memberMaterial').addEventListener('input', (event) => {
                     member.material = event.target.value;
+                    render();
+                });
+                inspectionContent.querySelector('#memberArea').addEventListener('input', (event) => {
+                    member.area = Number(event.target.value) || 1e-6;
+                    analyzeTruss();
+                    render();
+                });
+                inspectionContent.querySelector('#memberAllowable').addEventListener('input', (event) => {
+                    member.allowableStress = Number(event.target.value) || 1e-6;
+                    analyzeTruss();
                     render();
                 });
                 inspectionContent.querySelector('#memberA').addEventListener('change', (event) => {
@@ -659,18 +854,19 @@
                 line.setAttribute('y1', a.y);
                 line.setAttribute('x2', b.x);
                 line.setAttribute('y2', b.y);
-                line.setAttribute('stroke', state.selected && state.selected.type === 'member' && state.selected.id === member.id ? '#38bdf8' : '#f8fafc');
-                line.setAttribute('stroke-width', state.selected && state.selected.type === 'member' && state.selected.id === member.id ? '5' : '3');
+                const isSelected = state.selected && state.selected.type === 'member' && state.selected.id === member.id;
+                line.setAttribute('stroke', isSelected ? '#38bdf8' : member.status === 'FAILURE' ? '#f87171' : '#f8fafc');
+                line.setAttribute('stroke-width', isSelected ? '5' : '3');
                 line.setAttribute('stroke-linecap', 'round');
                 memberGroup.appendChild(line);
 
                 const label = document.createElementNS(svgNS, 'text');
                 label.setAttribute('x', (a.x + b.x) / 2);
                 label.setAttribute('y', (a.y + b.y) / 2 - 10);
-                label.setAttribute('fill', '#94a3b8');
+                label.setAttribute('fill', member.status === 'FAILURE' ? '#f87171' : '#94a3b8');
                 label.setAttribute('font-size', '12');
                 label.setAttribute('text-anchor', 'middle');
-                label.textContent = member.id;
+                label.textContent = `${member.id} · ${member.force.toFixed(1)}`;
                 memberGroup.appendChild(label);
             });
             svg.appendChild(memberGroup);
@@ -694,13 +890,15 @@
                 label.textContent = `${node.label} · ${node.support}`;
                 nodeGroup.appendChild(label);
 
-                if (node.load !== 0) {
+                const loadX = Number(node.loadX) || 0;
+                const loadY = Number(node.loadY) || 0;
+                if (loadX !== 0 || loadY !== 0) {
                     const loadText = document.createElementNS(svgNS, 'text');
                     loadText.setAttribute('x', node.x + 14);
                     loadText.setAttribute('y', node.y + 18);
-                    loadText.setAttribute('fill', node.load < 0 ? '#f87171' : '#4ade80');
+                    loadText.setAttribute('fill', loadY < 0 ? '#f87171' : '#4ade80');
                     loadText.setAttribute('font-size', '12');
-                    loadText.textContent = `${node.load} kN`;
+                    loadText.textContent = `${loadX.toFixed(1)}, ${loadY.toFixed(1)} kN`;
                     nodeGroup.appendChild(loadText);
                 }
             });
