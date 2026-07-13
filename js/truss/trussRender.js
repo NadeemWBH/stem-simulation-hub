@@ -8,7 +8,7 @@ const VISUAL_THEME = {
   pin: '#f59e0b',
   roller: '#22c55e',
   loadVector: '#f87171',
-  tension: '#38bdf8',
+  tension: '#0ea5e9',
   stable: '#22c55e',
   failure: '#f43f5e',
   text: '#e2e8f0',
@@ -16,7 +16,7 @@ const VISUAL_THEME = {
 };
 
 function drawGrid(context, width, height, options = {}) {
-  const { spacing = 50, majorEvery = 5, showAxes = true, snap = false } = options;
+  const { spacing = 50, showAxes = true, snap = false } = options;
   context.save();
   context.strokeStyle = VISUAL_THEME.grid;
   context.lineWidth = 1;
@@ -116,11 +116,42 @@ function drawLoadVector(context, node, scale = 1.0) {
   context.restore();
 }
 
-function getMemberColor(member, analysisResults = {}) {
+function getMemberColor(member, analysisData = {}) {
   if (!member) return VISUAL_THEME.stable;
-  if (member.status === 'FAILURE') return VISUAL_THEME.failure;
-  if (member.force && member.force > 0) return VISUAL_THEME.tension;
+  const analysisEntry = Array.isArray(analysisData.members)
+    ? analysisData.members.find(item => item.id === member.id)
+    : null;
+  const status = analysisEntry?.status || member.status || 'SAFE';
+  const force = analysisEntry?.force != null ? Number(analysisEntry.force) : Number(member.force) || 0;
+
+  if (status === 'FAILURE') return VISUAL_THEME.failure;
+  if (force > 0) return VISUAL_THEME.tension;
   return VISUAL_THEME.stable;
+}
+
+function drawMember(context, start, end, member, isSelected, analysisData = {}) {
+  const color = getMemberColor(member, analysisData);
+  context.save();
+  context.strokeStyle = color;
+  context.lineWidth = isSelected ? 6 : 3;
+  if (member?.status === 'FAILURE') {
+    context.setLineDash([6, 4]);
+  } else {
+    context.setLineDash([]);
+  }
+  context.beginPath();
+  context.moveTo(start.x, start.y);
+  context.lineTo(end.x, end.y);
+  context.stroke();
+  context.restore();
+
+  const midX = (start.x + end.x) / 2;
+  const midY = (start.y + end.y) / 2;
+  context.save();
+  context.fillStyle = VISUAL_THEME.text;
+  context.font = '12px sans-serif';
+  context.fillText(member.id, midX + 6, midY - 8);
+  context.restore();
 }
 
 function renderWorkspace(canvasId, state, analysisResults = {}) {
@@ -133,7 +164,7 @@ function renderWorkspace(canvasId, state, analysisResults = {}) {
   context.clearRect(0, 0, width, height);
   context.fillStyle = VISUAL_THEME.canvasBackground;
   context.fillRect(0, 0, width, height);
-  drawGrid(context, width, height, { spacing: 50, majorEvery: 5, snap: true });
+  drawGrid(context, width, height, { spacing: 50, showAxes: true, snap: true });
 
   const nodes = state?.nodes || [];
   const members = state?.members || [];
@@ -144,24 +175,7 @@ function renderWorkspace(canvasId, state, analysisResults = {}) {
     const start = nodes.find(node => node.id === member.a);
     const end = nodes.find(node => node.id === member.b);
     if (!start || !end) return;
-
-    const color = getMemberColor(member, analysisResults);
-    context.save();
-    context.strokeStyle = color;
-    context.lineWidth = member.id === selectedMemberId ? 6 : 3;
-    context.beginPath();
-    context.moveTo(start.x, start.y);
-    context.lineTo(end.x, end.y);
-    context.stroke();
-    context.restore();
-
-    const midX = (start.x + end.x) / 2;
-    const midY = (start.y + end.y) / 2;
-    context.save();
-    context.fillStyle = VISUAL_THEME.text;
-    context.font = '12px sans-serif';
-    context.fillText(member.id, midX + 6, midY - 8);
-    context.restore();
+    drawMember(context, start, end, member, member.id === selectedMemberId, analysisResults);
   });
 
   nodes.forEach(node => {
