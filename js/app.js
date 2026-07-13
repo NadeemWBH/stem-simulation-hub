@@ -16,6 +16,15 @@ import {
 } from './truss/trussState.js';
 import { solveStructuralSystem } from './truss/trussMath.js';
 import { renderWorkspace } from './truss/trussRender.js';
+import {
+  getProjectileState,
+  setProjectileConfig,
+  updateProjectileParameter,
+  computeTrajectory,
+  resetProjectileState,
+  setProjectileState
+} from './projectile/projectileState.js';
+import { renderProjectileScene } from './projectile/projectileRender.js';
 
 const APP_STATE = {
   activeModule: 'truss',
@@ -36,29 +45,27 @@ function initApp() {
   analysisSummary = document.getElementById('analysisSummary');
   inspectionContent = document.getElementById('inspectionContent');
   toolIndicator = document.getElementById('toolIndicator');
-  hintText = document.querySelector('.hint');
+  hintText = document.getElementById('workspaceHint');
 
   ensureModuleNav();
   bindModuleNav();
-  bindTrussToolButtons();
-  bindTrussActionButtons();
+  bindToolButtons();
+  bindActionButtons();
   bindCanvasInteractions();
   bindInspectorDrawer();
-  initializeTrussWorkspace();
   activateModule('truss');
 }
 
 function ensureModuleNav() {
+  if (document.querySelector('.module-nav')) return;
   const topbar = document.querySelector('.topbar');
   if (!topbar) return;
-  if (document.querySelector('.module-nav')) return;
-
-  const nav = document.createElement('div');
+  const nav = document.createElement('nav');
   nav.className = 'module-nav';
   nav.innerHTML = `
-    <button class="module-nav-btn active" data-module-nav="truss">Truss Simulator</button>
-    <button class="module-nav-btn" data-module-nav="projectile">Projectile Motion</button>
-    <button class="module-nav-btn" data-module-nav="orbital">Orbital Mechanics</button>
+    <button class="module-nav-btn active" data-module-nav="truss">Truss CAD</button>
+    <button class="module-nav-btn" data-module-nav="projectile">Ballistics</button>
+    <button class="module-nav-btn" data-module-nav="orbital">Orbital</button>
   `;
   topbar.insertBefore(nav, topbar.firstChild);
 }
@@ -69,7 +76,7 @@ function bindModuleNav() {
   });
 }
 
-function bindTrussToolButtons() {
+function bindToolButtons() {
   document.querySelectorAll('.tool-btn').forEach(button => {
     button.addEventListener('click', () => {
       const tool = button.dataset.tool;
@@ -85,46 +92,63 @@ function bindTrussToolButtons() {
   });
 }
 
-function bindTrussActionButtons() {
+function bindActionButtons() {
   const analyzeBtn = document.getElementById('analyzeBtn');
   if (analyzeBtn) {
     analyzeBtn.addEventListener('click', () => {
-      syncTrussView();
+      if (APP_STATE.activeModule === 'projectile') {
+        syncProjectileView();
+      } else {
+        syncTrussView();
+      }
     });
   }
 
   const resetBtn = document.getElementById('resetBtn');
   if (resetBtn) {
     resetBtn.addEventListener('click', () => {
-      resetToDefault();
-      APP_STATE.selectedNodeId = null;
-      APP_STATE.selectedMemberId = null;
-      APP_STATE.pendingNodeId = null;
-      syncTrussView();
+      if (APP_STATE.activeModule === 'projectile') {
+        resetProjectileState();
+        syncProjectileView();
+      } else {
+        resetToDefault();
+        APP_STATE.selectedNodeId = null;
+        APP_STATE.selectedMemberId = null;
+        APP_STATE.pendingNodeId = null;
+        syncTrussView();
+      }
     });
   }
 
   const exampleBtn = document.getElementById('exampleBtn');
   if (exampleBtn) {
     exampleBtn.addEventListener('click', () => {
-      resetToDefault();
-      APP_STATE.selectedNodeId = null;
-      APP_STATE.selectedMemberId = null;
-      APP_STATE.pendingNodeId = null;
-      syncTrussView();
+      if (APP_STATE.activeModule === 'projectile') {
+        setProjectileConfig({
+          launchSpeed: 40,
+          launchAngle: 45,
+          mass: 5,
+          dragCoefficient: 0.47,
+          projectileArea: 0.01
+        });
+        syncProjectileView();
+      } else {
+        resetToDefault();
+        APP_STATE.selectedNodeId = null;
+        APP_STATE.selectedMemberId = null;
+        APP_STATE.pendingNodeId = null;
+        syncTrussView();
+      }
     });
   }
 }
 
 function bindCanvasInteractions() {
-  const canvasContainer = document.querySelector('.canvas-wrap');
-  if (!canvasContainer) return;
+  const trussCanvas = document.getElementById('trussCanvas');
+  if (!trussCanvas) return;
+  workspaceCanvas = trussCanvas;
 
-  const canvas = document.getElementById('trussCanvas');
-  if (!canvas) return;
-  workspaceCanvas = canvas;
-
-  canvas.addEventListener('click', event => {
+  trussCanvas.addEventListener('click', event => {
     if (APP_STATE.activeModule !== 'truss') return;
     const point = getCanvasPoint(event);
     const hit = hitTest(point);
@@ -207,32 +231,29 @@ function bindInspectorDrawer() {
   }
 }
 
-function initializeTrussWorkspace() {
-  const canvasContainer = document.querySelector('.canvas-wrap');
-  if (!canvasContainer) return;
+function setCanvasVisibility(moduleName) {
+  const trussCanvas = document.getElementById('trussCanvas');
+  const projectileCanvas = document.getElementById('projectileCanvas');
+  const orbitalCanvas = document.getElementById('orbitalCanvas');
 
-  let canvas = document.getElementById('trussCanvas');
-  if (!canvas) {
-    canvas = document.createElement('canvas');
-    canvas.id = 'trussCanvas';
-    canvas.width = 900;
-    canvas.height = 560;
-    canvasContainer.innerHTML = '';
-    canvasContainer.appendChild(canvas);
-  } else if (canvas.tagName.toLowerCase() !== 'canvas') {
-    const replacement = document.createElement('canvas');
-    replacement.id = 'trussCanvas';
-    replacement.width = 900;
-    replacement.height = 560;
-    canvas.replaceWith(replacement);
-    canvas = replacement;
+  if (trussCanvas) {
+    trussCanvas.style.display = moduleName === 'truss' ? 'block' : 'none';
+  }
+  if (projectileCanvas) {
+    projectileCanvas.style.display = moduleName === 'projectile' ? 'block' : 'none';
+  }
+  if (orbitalCanvas) {
+    orbitalCanvas.style.display = moduleName === 'orbital' ? 'block' : 'none';
   }
 
-  workspaceCanvas = canvas;
-  canvas.style.width = '100%';
-  canvas.style.maxWidth = '980px';
-  canvas.style.height = 'auto';
-  canvas.style.display = 'block';
+  workspaceCanvas = moduleName === 'truss' ? trussCanvas : null;
+}
+
+function initializeTrussWorkspace() {
+  setCanvasVisibility('truss');
+  const trussCanvas = document.getElementById('trussCanvas');
+  if (!trussCanvas) return;
+  workspaceCanvas = trussCanvas;
 
   const nodes = getNodes();
   const members = getMembers();
@@ -251,6 +272,9 @@ function activateModule(moduleName) {
     button.classList.toggle('active', button.dataset.moduleNav === moduleName);
   });
 
+  setCanvasVisibility(moduleName);
+  updateToolIndicator();
+
   if (moduleName === 'projectile') {
     initializeProjectileModule();
   } else if (moduleName === 'orbital') {
@@ -262,11 +286,12 @@ function activateModule(moduleName) {
 
 function initializeProjectileModule() {
   if (hintText) {
-    hintText.textContent = 'Projectile Motion placeholder ready — the trajectory simulator will initialize here next.';
+    hintText.textContent = 'Ballistics mode ready — run analysis to simulate the projectile trajectory.';
   }
   if (analysisSummary) {
-    analysisSummary.innerHTML = '<div class="stat-item"><span>Projectile Motion</span><strong>Coming soon</strong></div>';
+    analysisSummary.innerHTML = '<div class="stat-item"><span>Ballistics</span><strong>Preparing simulation…</strong></div>';
   }
+  syncProjectileView();
 }
 
 function initializeOrbitalModule() {
@@ -286,12 +311,19 @@ function updateToolButtonState() {
 
 function updateToolIndicator() {
   if (!toolIndicator) return;
-  const label = (getCurrentTool() || INITIAL_TOOL).charAt(0).toUpperCase() + (getCurrentTool() || INITIAL_TOOL).slice(1);
-  toolIndicator.textContent = `Tool: ${label}`;
+  if (APP_STATE.activeModule === 'projectile') {
+    toolIndicator.textContent = 'Module: Ballistics';
+  } else if (APP_STATE.activeModule === 'orbital') {
+    toolIndicator.textContent = 'Module: Orbital';
+  } else {
+    const label = (getCurrentTool() || INITIAL_TOOL).charAt(0).toUpperCase() + (getCurrentTool() || INITIAL_TOOL).slice(1);
+    toolIndicator.textContent = `Tool: ${label}`;
+  }
 }
 
 function getCanvasPoint(event) {
-  const rect = workspaceCanvas.getBoundingClientRect();
+  const rect = workspaceCanvas?.getBoundingClientRect();
+  if (!workspaceCanvas || !rect) return { x: 0, y: 0 };
   return {
     x: ((event.clientX - rect.left) / rect.width) * workspaceCanvas.width,
     y: ((event.clientY - rect.top) / rect.height) * workspaceCanvas.height
@@ -355,6 +387,32 @@ function syncTrussView() {
   renderWorkspace('trussCanvas', renderState, { members: analysisMembers });
   updateAnalysisSummary(analysis, analysisMembers);
   renderInspectionPanel();
+  updateToolIndicator();
+}
+
+function syncProjectileView() {
+  if (APP_STATE.activeModule !== 'projectile') return;
+  const projectileState = computeTrajectory();
+  const trajectory = Array.isArray(projectileState?.trajectory) ? projectileState.trajectory : [];
+  const result = projectileState?.result || projectileState;
+  const summary = result?.summary || {};
+
+  renderProjectileScene('projectileCanvas', trajectory, {
+    xScale: 0.9,
+    yScale: 0.85,
+    originX: 96,
+    originY: 520
+  });
+
+  if (analysisSummary) {
+    analysisSummary.innerHTML = `
+      <div class="stat-item"><span>Ballistics</span><strong>${(projectileState?.launchSpeed || 0).toFixed(1)} m/s · ${(projectileState?.launchAngle || 0).toFixed(1)}°</strong></div>
+      <div class="stat-item"><span>Peak Height</span><strong>${(summary.peakHeight || 0).toFixed(2)} m</strong></div>
+      <div class="stat-item"><span>Flight Time</span><strong>${(summary.flightTime || 0).toFixed(2)} s</strong></div>
+      <div class="stat-item"><span>Range</span><strong>${(summary.totalDistance || 0).toFixed(2)} m</strong></div>
+    `;
+  }
+
   updateToolIndicator();
 }
 
