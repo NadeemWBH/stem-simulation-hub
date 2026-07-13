@@ -50,12 +50,22 @@
       </aside>
 
       <main class="canvas-area" aria-label="Interactive simulation workspace">
+        <!-- Canvas Toolbar (Shared / Contextual) -->
         <div class="canvas-toolbar">
-          <div class="hint">Click into the drawing area to place nodes, then connect two nodes to build a member.</div>
-          <div class="tag" id="toolIndicator">Tool: Select</div>
+          <div class="hint" id="workspaceHint">Click into the drawing area to place nodes, then connect two nodes to build a member.</div>
+          <div class="tag" id="toolIndicator">Module: Truss CAD</div>
         </div>
+        
+        <!-- Canvas Wrap containing all three canvases -->
         <div class="canvas-wrap">
-          <canvas id="trussCanvas" width="900" height="560"></canvas>
+          <!-- Truss Canvas -->
+          <canvas id="trussCanvas" width="900" height="560" class="sim-canvas"></canvas>
+          
+          <!-- Ballistics Canvas (Hidden by default) -->
+          <canvas id="projectileCanvas" width="900" height="560" class="sim-canvas" style="display: none;"></canvas>
+          
+          <!-- Orbital Canvas (Hidden by default) -->
+          <canvas id="orbitalCanvas" width="900" height="560" class="sim-canvas" style="display: none;"></canvas>
         </div>
       </main>
 
