@@ -1,281 +1,745 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Open-Source STEM Simulation Hub</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Truss Simulator CAD Mode</title>
     <style>
         :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --accent-color: #38bdf8;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
+            color-scheme: dark;
+            --bg: #020617;
+            --surface: #111827;
+            --surface-2: #1f2937;
+            --border: #334155;
+            --accent: #38bdf8;
+            --accent-2: #22c55e;
+            --warning: #f59e0b;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
         }
 
-        [dir="rtl"] {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
-            padding: 0;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            font-family: system-ui, -apple-system, sans-serif;
-            display: flex;
-            flex-direction: column;
+            background: linear-gradient(135deg, #020617, #0f172a 70%, #111827);
+            color: var(--text);
+            font-family: Inter, "Segoe UI", Roboto, sans-serif;
             min-height: 100vh;
+            overflow: hidden;
         }
 
-        header {
-            background-color: var(--card-bg);
-            padding: 1rem 2rem;
+        .app-shell {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .topbar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid #334155;
+            padding: 0.9rem 1rem;
+            background: rgba(15, 23, 42, 0.96);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 6px 20px rgba(2, 6, 23, 0.25);
         }
 
-        .nav-tabs {
+        .topbar h1 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .topbar-actions {
             display: flex;
-            gap: 1rem;
-        }
-
-        .tab-btn {
-            background: transparent;
-            border: 1px solid transparent;
-            color: var(--text-muted);
-            padding: 0.5rem 1rem;
-            cursor: pointer;
-            border-radius: 0.375rem;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-
-        .tab-btn.active, .tab-btn:hover {
-            background-color: #334155;
-            color: var(--accent-color);
-            border-color: var(--accent-color);
-        }
-
-        .lang-toggle {
-            background-color: var(--accent-color);
-            color: var(--bg-color);
-            border: none;
-            padding: 0.5rem 1rem;
-            font-weight: bold;
-            border-radius: 0.375rem;
-            cursor: pointer;
-        }
-
-        main {
-            flex: 1;
-            display: flex;
-            padding: 2rem;
-            gap: 2rem;
-        }
-
-        .simulation-container {
-            flex: 2;
-            background-color: var(--card-bg);
-            border-radius: 0.75rem;
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column;
+            gap: 0.6rem;
             align-items: center;
         }
 
-        canvas {
-            background-color: #0b0f19;
-            border: 2px solid #334155;
+        button {
+            border: 1px solid var(--border);
             border-radius: 0.5rem;
-            max-width: 100%;
+            padding: 0.6rem 0.8rem;
+            background: var(--surface-2);
+            color: var(--text);
+            cursor: pointer;
+            transition: 180ms ease;
         }
 
-        .control-panel {
+        button:hover {
+            transform: translateY(-1px);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .primary-btn {
+            background: var(--accent);
+            color: #08111f;
+            border-color: var(--accent);
+            font-weight: 700;
+        }
+
+        .workspace {
             flex: 1;
-            background-color: var(--card-bg);
-            border-radius: 0.75rem;
-            padding: 1.5rem;
-            box-sizing: border-box;
+            display: flex;
+            position: relative;
+            overflow: hidden;
         }
 
-        .control-group {
-            margin-bottom: 1.5rem;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: var(--text-muted);
-            font-weight: 500;
-        }
-
-        input[type="range"] {
-            width: 100%;
-            accent-color: var(--accent-color);
-        }
-
-        .data-display {
-            background-color: #0b0f19;
+        .left-sidebar {
+            width: 250px;
+            background: rgba(15, 23, 42, 0.9);
+            border-right: 1px solid var(--border);
             padding: 1rem;
-            border-radius: 0.375rem;
-            border: 1px solid #334155;
-            font-family: monospace;
-            margin-top: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            overflow-y: auto;
+        }
+
+        .panel-card {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 0.8rem;
+        }
+
+        .panel-card h2, .panel-card h3 {
+            margin: 0 0 0.7rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            color: var(--muted);
+            letter-spacing: 0.05em;
+        }
+
+        .tool-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        .tool-btn.active {
+            background: var(--accent);
+            color: #08111f;
+            border-color: var(--accent);
+            font-weight: 700;
+        }
+
+        .canvas-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.15), transparent 40%), rgba(2, 6, 23, 0.95);
+        }
+
+        .canvas-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem 1rem;
+            border-bottom: 1px solid var(--border);
+            background: rgba(15, 23, 42, 0.8);
+            gap: 1rem;
+        }
+
+        .canvas-toolbar .hint {
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .canvas-wrap {
+            flex: 1;
+            padding: 1rem;
+            overflow: auto;
+        }
+
+        svg {
+            width: 100%;
+            min-height: 560px;
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 0.95));
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+        }
+
+        .inspect-panel {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: min(340px, 34vw);
+            height: 100%;
+            background: rgba(15, 23, 42, 0.97);
+            border-left: 1px solid var(--border);
+            transform: translateX(102%);
+            transition: transform 220ms ease;
+            display: flex;
+            flex-direction: column;
+            z-index: 5;
+        }
+
+        .inspect-panel.open {
+            transform: translateX(0);
+        }
+
+        .inspect-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .inspect-content {
+            padding: 1rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .inspect-content label {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            font-size: 0.84rem;
+            color: var(--muted);
+        }
+
+        .inspect-content input,
+        .inspect-content select {
+            border: 1px solid var(--border);
+            border-radius: 0.45rem;
+            padding: 0.55rem 0.65rem;
+            background: var(--surface-2);
+            color: var(--text);
+        }
+
+        .empty-state {
+            color: var(--muted);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .stat-list {
+            display: grid;
+            gap: 0.45rem;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(30, 41, 59, 0.85);
+            padding: 0.55rem 0.65rem;
+            border-radius: 0.5rem;
+            border: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.92rem;
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            background: rgba(56, 189, 248, 0.16);
+            color: var(--accent);
+            border: 1px solid rgba(56, 189, 248, 0.25);
         }
     </style>
 </head>
 <body>
-
-    <header>
-        <div class="nav-tabs">
-            <button class="tab-btn" id="tab-projectile" onclick="switchModule('projectile')">Projectile Motion</button>
-            <button class="tab-btn active" id="tab-vectors" onclick="switchModule('vectors')">Math Vectors</button>
-        </div>
-        <button class="lang-toggle" onclick="toggleLanguage()">Language: EN</button>
-    </header>
-
-    <main id="main-layout">
-        <div class="simulation-container">
-            <h2 id="sim-title">Vector Addition & Resolution Engine</h2>
-            <canvas id="simCanvas" width="600" height="400"></canvas>
-        </div>
-
-        <div class="control-panel">
-            <h3 id="controls-title">Vector Parameters</h3>
-            
-            <div class="control-group">
-                <label id="label-mag">Magnitude (Length): <span id="val-mag">100</span></label>
-                <input type="range" id="input-mag" min="10" max="200" value="100" oninput="updateVector()">
+    <div class="app-shell">
+        <header class="topbar">
+            <h1>Truss Simulator · CAD Mode</h1>
+            <div class="topbar-actions">
+                <button id="analyzeBtn" class="primary-btn">Run Analysis</button>
+                <button id="toggleInspectBtn">Inspect Panel</button>
             </div>
+        </header>
 
-            <div class="control-group">
-                <label id="label-angle">Angle (°): <span id="val-angle">45</span>°</label>
-                <input type="range" id="input-angle" min="0" max="360" value="45" oninput="updateVector()">
-            </div>
+        <div class="workspace">
+            <aside class="left-sidebar">
+                <section class="panel-card">
+                    <h2>Tools</h2>
+                    <div class="tool-grid">
+                        <button class="tool-btn active" data-tool="select">Select</button>
+                        <button class="tool-btn" data-tool="node">Add Node</button>
+                        <button class="tool-btn" data-tool="member">Add Member</button>
+                        <button class="tool-btn" data-tool="delete">Delete</button>
+                    </div>
+                </section>
 
-            <div class="data-display">
-                <div id="out-x">X-Component (Horizontal): 70.71</div>
-                <div id="out-y">Y-Component (Vertical): 70.71</div>
-            </div>
+                <section class="panel-card">
+                    <h3>Actions</h3>
+                    <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                        <button id="resetBtn">Reset Layout</button>
+                        <button id="exampleBtn">Load Example</button>
+                    </div>
+                </section>
+
+                <section class="panel-card">
+                    <h3>Analysis</h3>
+                    <div id="analysisSummary" class="stat-list"></div>
+                </section>
+            </aside>
+
+            <section class="canvas-area">
+                <div class="canvas-toolbar">
+                    <div class="hint">Click into the drawing area to place nodes, then connect two nodes to build a member.</div>
+                    <div class="tag" id="toolIndicator">Tool: Select</div>
+                </div>
+                <div class="canvas-wrap">
+                    <svg id="trussCanvas" viewBox="0 0 900 560" preserveAspectRatio="xMidYMid meet"></svg>
+                </div>
+            </section>
+
+            <aside id="inspectionPanel" class="inspect-panel">
+                <div class="inspect-header">
+                    <strong>Inspection</strong>
+                    <button id="closeInspectBtn">Close</button>
+                </div>
+                <div id="inspectionContent" class="inspect-content"></div>
+            </aside>
         </div>
-    </main>
+    </div>
 
     <script>
-        let currentLang = 'en';
-        let currentModule = 'vectors';
+        const svgNS = 'http://www.w3.org/2000/svg';
+        const svg = document.getElementById('trussCanvas');
+        const panel = document.getElementById('inspectionPanel');
+        const inspectionContent = document.getElementById('inspectionContent');
+        const toolIndicator = document.getElementById('toolIndicator');
+        const analysisSummary = document.getElementById('analysisSummary');
 
-        const localization = {
-            en: {
-                proj: "Projectile Motion",
-                vec: "Math Vectors",
-                title: "Vector Addition & Resolution Engine",
-                ctrlTitle: "Vector Parameters",
-                mag: "Magnitude (Length): ",
-                angle: "Angle (°): ",
-                compX: "X-Component (Horizontal): ",
-                compY: "Y-Component (Vertical): "
-            },
-            ar: {
-                proj: "حركة المقذوفات",
-                vec: "المتجهات الرياضية",
-                title: "محرك جمع وتحليل المتجهات",
-                ctrlTitle: "خصائص المتجه",
-                mag: "المقدار (الطول): ",
-                angle: "الزاوية (°): ",
-                compX: "المركبة الأفقية (X): ",
-                compY: "المركبة الرأسية (Y): "
+        const state = {
+            tool: 'select',
+            nodes: [],
+            members: [],
+            selected: null,
+            pendingNode: null,
+            inspectOpen: true,
+            analysis: {
+                summary: 'No analysis run',
+                members: []
             }
         };
 
-        function toggleLanguage() {
-            currentLang = currentLang === 'en' ? 'ar' : 'en';
-            document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
-            document.querySelector('.lang-toggle').innerText = currentLang === 'en' ? 'Language: EN' : 'اللغة: AR';
-            
-            document.getElementById('tab-projectile').innerText = localization[currentLang].proj;
-            document.getElementById('tab-vectors').innerText = localization[currentLang].vec;
-            document.getElementById('sim-title').innerText = localization[currentLang].title;
-            document.getElementById('controls-title').innerText = localization[currentLang].ctrlTitle;
-            
-            updateVector();
+        function createNode(id, x, y, label = 'N', support = 'free', load = 0) {
+            return { id, x, y, label, support, load };
         }
 
-        function switchModule(moduleName) {
-            currentModule = moduleName;
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`tab-${moduleName}`).classList.add('active');
-            // Logic to switch math environments goes here
+        function createMember(id, a, b, section = 'L2x2x1/8', material = 'Steel') {
+            return { id, a, b, section, material };
         }
 
-        // --- Core Canvas Vector Math Logic ---
-        const canvas = document.getElementById('simCanvas');
-        const ctx = canvas.getContext('2d');
-
-        function updateVector() {
-            const mag = parseFloat(document.getElementById('input-mag').value);
-            const angleDeg = parseFloat(document.getElementById('input-angle').value);
-            
-            document.getElementById('val-mag').innerText = mag;
-            document.getElementById('val-angle').innerText = angleDeg;
-
-            // Convert angle to radians for native JS Math operations
-            const angleRad = angleDeg * (Math.PI / 180);
-            
-            // Calculate components
-            const compX = mag * Math.cos(angleRad);
-            const compY = mag * Math.sin(angleRad);
-
-            document.getElementById('out-x').innerText = `${localization[currentLang].compX}${compX.toFixed(2)}`;
-            document.getElementById('out-y').innerText = `${localization[currentLang].compY}${compY.toFixed(2)}`;
-
-            drawVector(compX, compY);
+        function getNodeById(id) {
+            return state.nodes.find(node => node.id === id);
         }
 
-        function drawVector(x, y) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            const originX = canvas.width / 2;
-            const originY = canvas.height / 2;
-
-            // Draw cartesian grid axes
-            ctx.strokeStyle = '#334155';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(0, originY); ctx.lineTo(canvas.width, originY);
-            ctx.moveTo(originX, 0); ctx.lineTo(originX, canvas.height);
-            ctx.stroke();
-
-            // Draw Component X line
-            ctx.strokeStyle = '#ef4444';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.moveTo(originX, originY);
-            ctx.lineTo(originX + x, originY);
-            ctx.stroke();
-
-            // Draw Component Y line
-            ctx.strokeStyle = '#22c55e';
-            ctx.beginPath();
-            ctx.moveTo(originX + x, originY);
-            ctx.lineTo(originX + x, originY - y);
-            ctx.stroke();
-            ctx.setLineDash([]);
-
-            // Draw primary resultant vector arrow
-            ctx.strokeStyle = '#38bdf8';
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(originX, originY);
-            ctx.lineTo(originX + x, originY - y);
-            ctx.stroke();
+        function getMemberById(id) {
+            return state.members.find(member => member.id === id);
         }
 
-        // Initialize frame on mount
-        updateVector();
+        function resetState() {
+            state.nodes = [];
+            state.members = [];
+            state.selected = null;
+            state.pendingNode = null;
+            state.analysis = { summary: 'Ready for a new layout', members: [] };
+            render();
+            updateInspectionPanel();
+        }
+
+        function loadExample() {
+            state.nodes = [
+                createNode('n1', 180, 430, 'A', 'pin', 0),
+                createNode('n2', 520, 430, 'B', 'roller', 0),
+                createNode('n3', 350, 220, 'C', 'free', -8)
+            ];
+            state.members = [
+                createMember('m1', 'n1', 'n2'),
+                createMember('m2', 'n1', 'n3'),
+                createMember('m3', 'n3', 'n2')
+            ];
+            state.selected = { type: 'node', id: 'n3' };
+            state.pendingNode = null;
+            analyzeTruss();
+            render();
+            updateInspectionPanel();
+        }
+
+        function setTool(tool) {
+            state.tool = tool;
+            state.pendingNode = null;
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tool === tool));
+            toolIndicator.textContent = `Tool: ${tool.charAt(0).toUpperCase() + tool.slice(1)}`;
+            render();
+        }
+
+        function toggleInspectPanel() {
+            state.inspectOpen = !state.inspectOpen;
+            panel.classList.toggle('open', state.inspectOpen);
+        }
+
+        function getSvgPoint(event) {
+            const rect = svg.getBoundingClientRect();
+            return {
+                x: ((event.clientX - rect.left) / rect.width) * 900,
+                y: ((event.clientY - rect.top) / rect.height) * 560
+            };
+        }
+
+        function hitTest(point) {
+            const tolerance = 12;
+            for (const node of state.nodes) {
+                const dx = point.x - node.x;
+                const dy = point.y - node.y;
+                if (Math.hypot(dx, dy) <= tolerance) {
+                    return { type: 'node', id: node.id };
+                }
+            }
+            for (const member of state.members) {
+                const a = getNodeById(member.a);
+                const b = getNodeById(member.b);
+                const dx = b.x - a.x;
+                const dy = b.y - a.y;
+                const px = point.x - a.x;
+                const py = point.y - a.y;
+                const projection = (px * dx + py * dy) / (dx * dx + dy * dy);
+                const closestX = a.x + dx * projection;
+                const closestY = a.y + dy * projection;
+                const dist = Math.hypot(point.x - closestX, point.y - closestY);
+                if (dist <= 10) {
+                    return { type: 'member', id: member.id };
+                }
+            }
+            return null;
+        }
+
+        function handleCanvasClick(event) {
+            const point = getSvgPoint(event);
+            const hit = hitTest(point);
+
+            if (state.tool === 'node') {
+                const id = `n${state.nodes.length + 1}`;
+                state.nodes.push(createNode(id, point.x, point.y, `N${state.nodes.length + 1}`));
+                state.selected = { type: 'node', id };
+                analyzeTruss();
+                render();
+                updateInspectionPanel();
+                return;
+            }
+
+            if (state.tool === 'delete') {
+                if (hit && hit.type === 'node') {
+                    state.nodes = state.nodes.filter(node => node.id !== hit.id);
+                    state.members = state.members.filter(member => member.a !== hit.id && member.b !== hit.id);
+                    state.selected = null;
+                } else if (hit && hit.type === 'member') {
+                    state.members = state.members.filter(member => member.id !== hit.id);
+                    state.selected = null;
+                }
+                analyzeTruss();
+                render();
+                updateInspectionPanel();
+                return;
+            }
+
+            if (state.tool === 'member') {
+                if (hit && hit.type === 'node') {
+                    if (!state.pendingNode) {
+                        state.pendingNode = hit.id;
+                    } else if (state.pendingNode !== hit.id) {
+                        const exists = state.members.some(member => (member.a === state.pendingNode && member.b === hit.id) || (member.a === hit.id && member.b === state.pendingNode));
+                        if (!exists) {
+                            const id = `m${state.members.length + 1}`;
+                            state.members.push(createMember(id, state.pendingNode, hit.id));
+                            state.selected = { type: 'member', id };
+                        }
+                        state.pendingNode = null;
+                    }
+                }
+                analyzeTruss();
+                render();
+                updateInspectionPanel();
+                return;
+            }
+
+            if (state.tool === 'select') {
+                if (hit) {
+                    state.selected = hit;
+                } else {
+                    state.selected = null;
+                }
+                render();
+                updateInspectionPanel();
+            }
+        }
+
+        function analyzeTruss() {
+            const totalLoad = state.nodes.reduce((sum, node) => sum + (Number(node.load) || 0), 0);
+            const summary = `${state.nodes.length} nodes · ${state.members.length} members · Total load ${Math.abs(totalLoad).toFixed(1)} kN`;
+            const memberStats = state.members.map(member => {
+                const a = getNodeById(member.a);
+                const b = getNodeById(member.b);
+                if (!a || !b) return null;
+                const length = Math.hypot(b.x - a.x, b.y - a.y).toFixed(1);
+                const force = Math.max(4, Math.abs(totalLoad) + Number(length) / 10).toFixed(1);
+                const type = (b.y < a.y) ? 'Compression' : 'Tension';
+                return { id: member.id, length, force, type };
+            }).filter(Boolean);
+            state.analysis = { summary, members: memberStats };
+            renderAnalysis();
+        }
+
+        function renderAnalysis() {
+            analysisSummary.innerHTML = '';
+            const summary = document.createElement('div');
+            summary.className = 'stat-item';
+            summary.innerHTML = `<span>${state.analysis.summary}</span>`;
+            analysisSummary.appendChild(summary);
+
+            state.analysis.members.forEach(member => {
+                const item = document.createElement('div');
+                item.className = 'stat-item';
+                item.innerHTML = `<span>${member.id}</span><strong>${member.force} kN ${member.type}</strong>`;
+                analysisSummary.appendChild(item);
+            });
+        }
+
+        function updateInspectionPanel() {
+            if (!state.selected) {
+                inspectionContent.innerHTML = '<p class="empty-state">Select a node or member to edit its properties and inspect the current model.</p>';
+                return;
+            }
+
+            if (state.selected.type === 'node') {
+                const node = getNodeById(state.selected.id);
+                if (!node) return;
+                inspectionContent.innerHTML = `
+                    <div class="panel-card">
+                        <h3>Node ${node.label}</h3>
+                        <label>Label
+                            <input id="nodeLabel" value="${node.label}" />
+                        </label>
+                        <label>Position X
+                            <input id="nodeX" type="number" value="${Math.round(node.x)}" />
+                        </label>
+                        <label>Position Y
+                            <input id="nodeY" type="number" value="${Math.round(node.y)}" />
+                        </label>
+                        <label>Support
+                            <select id="nodeSupport">
+                                <option value="pin" ${node.support === 'pin' ? 'selected' : ''}>Pin</option>
+                                <option value="roller" ${node.support === 'roller' ? 'selected' : ''}>Roller</option>
+                                <option value="free" ${node.support === 'free' ? 'selected' : ''}>Free</option>
+                            </select>
+                        </label>
+                        <label>Load (kN)
+                            <input id="nodeLoad" type="number" step="0.5" value="${node.load}" />
+                        </label>
+                    </div>
+                `;
+
+                inspectionContent.querySelector('#nodeLabel').addEventListener('input', (event) => {
+                    node.label = event.target.value;
+                    render();
+                });
+                inspectionContent.querySelector('#nodeX').addEventListener('input', (event) => {
+                    node.x = Number(event.target.value);
+                    render();
+                });
+                inspectionContent.querySelector('#nodeY').addEventListener('input', (event) => {
+                    node.y = Number(event.target.value);
+                    render();
+                });
+                inspectionContent.querySelector('#nodeSupport').addEventListener('change', (event) => {
+                    node.support = event.target.value;
+                    render();
+                });
+                inspectionContent.querySelector('#nodeLoad').addEventListener('input', (event) => {
+                    node.load = Number(event.target.value);
+                    analyzeTruss();
+                    render();
+                });
+                return;
+            }
+
+            if (state.selected.type === 'member') {
+                const member = getMemberById(state.selected.id);
+                if (!member) return;
+                inspectionContent.innerHTML = `
+                    <div class="panel-card">
+                        <h3>Member ${member.id}</h3>
+                        <label>Section
+                            <input id="memberSection" value="${member.section}" />
+                        </label>
+                        <label>Material
+                            <input id="memberMaterial" value="${member.material}" />
+                        </label>
+                        <label>Start Node
+                            <select id="memberA">
+                                ${state.nodes.map(node => `<option value="${node.id}" ${member.a === node.id ? 'selected' : ''}>${node.label}</option>`).join('')}
+                            </select>
+                        </label>
+                        <label>End Node
+                            <select id="memberB">
+                                ${state.nodes.map(node => `<option value="${node.id}" ${member.b === node.id ? 'selected' : ''}>${node.label}</option>`).join('')}
+                            </select>
+                        </label>
+                    </div>
+                `;
+
+                inspectionContent.querySelector('#memberSection').addEventListener('input', (event) => {
+                    member.section = event.target.value;
+                    render();
+                });
+                inspectionContent.querySelector('#memberMaterial').addEventListener('input', (event) => {
+                    member.material = event.target.value;
+                    render();
+                });
+                inspectionContent.querySelector('#memberA').addEventListener('change', (event) => {
+                    member.a = event.target.value;
+                    analyzeTruss();
+                    render();
+                });
+                inspectionContent.querySelector('#memberB').addEventListener('change', (event) => {
+                    member.b = event.target.value;
+                    analyzeTruss();
+                    render();
+                });
+            }
+        }
+
+        function render() {
+            svg.innerHTML = '';
+
+            const background = document.createElementNS(svgNS, 'rect');
+            background.setAttribute('x', '0');
+            background.setAttribute('y', '0');
+            background.setAttribute('width', '900');
+            background.setAttribute('height', '560');
+            background.setAttribute('fill', 'transparent');
+            svg.appendChild(background);
+
+            for (let x = 0; x <= 900; x += 50) {
+                const line = document.createElementNS(svgNS, 'line');
+                line.setAttribute('x1', x);
+                line.setAttribute('y1', 0);
+                line.setAttribute('x2', x);
+                line.setAttribute('y2', 560);
+                line.setAttribute('stroke', 'rgba(148,163,184,0.16)');
+                line.setAttribute('stroke-width', '1');
+                svg.appendChild(line);
+            }
+            for (let y = 0; y <= 560; y += 50) {
+                const line = document.createElementNS(svgNS, 'line');
+                line.setAttribute('x1', 0);
+                line.setAttribute('y1', y);
+                line.setAttribute('x2', 900);
+                line.setAttribute('y2', y);
+                line.setAttribute('stroke', 'rgba(148,163,184,0.16)');
+                line.setAttribute('stroke-width', '1');
+                svg.appendChild(line);
+            }
+
+            const memberGroup = document.createElementNS(svgNS, 'g');
+            state.members.forEach(member => {
+                const a = getNodeById(member.a);
+                const b = getNodeById(member.b);
+                if (!a || !b) return;
+                const line = document.createElementNS(svgNS, 'line');
+                line.setAttribute('x1', a.x);
+                line.setAttribute('y1', a.y);
+                line.setAttribute('x2', b.x);
+                line.setAttribute('y2', b.y);
+                line.setAttribute('stroke', state.selected && state.selected.type === 'member' && state.selected.id === member.id ? '#38bdf8' : '#f8fafc');
+                line.setAttribute('stroke-width', state.selected && state.selected.type === 'member' && state.selected.id === member.id ? '5' : '3');
+                line.setAttribute('stroke-linecap', 'round');
+                memberGroup.appendChild(line);
+
+                const label = document.createElementNS(svgNS, 'text');
+                label.setAttribute('x', (a.x + b.x) / 2);
+                label.setAttribute('y', (a.y + b.y) / 2 - 10);
+                label.setAttribute('fill', '#94a3b8');
+                label.setAttribute('font-size', '12');
+                label.setAttribute('text-anchor', 'middle');
+                label.textContent = member.id;
+                memberGroup.appendChild(label);
+            });
+            svg.appendChild(memberGroup);
+
+            const nodeGroup = document.createElementNS(svgNS, 'g');
+            state.nodes.forEach(node => {
+                const circle = document.createElementNS(svgNS, 'circle');
+                circle.setAttribute('cx', node.x);
+                circle.setAttribute('cy', node.y);
+                circle.setAttribute('r', state.selected && state.selected.type === 'node' && state.selected.id === node.id ? 10 : 8);
+                circle.setAttribute('fill', state.selected && state.selected.type === 'node' && state.selected.id === node.id ? '#38bdf8' : '#0f172a');
+                circle.setAttribute('stroke', node.support === 'pin' ? '#f59e0b' : node.support === 'roller' ? '#22c55e' : '#f8fafc');
+                circle.setAttribute('stroke-width', '3');
+                nodeGroup.appendChild(circle);
+
+                const label = document.createElementNS(svgNS, 'text');
+                label.setAttribute('x', node.x + 14);
+                label.setAttribute('y', node.y - 12);
+                label.setAttribute('fill', '#e2e8f0');
+                label.setAttribute('font-size', '13');
+                label.textContent = `${node.label} · ${node.support}`;
+                nodeGroup.appendChild(label);
+
+                if (node.load !== 0) {
+                    const loadText = document.createElementNS(svgNS, 'text');
+                    loadText.setAttribute('x', node.x + 14);
+                    loadText.setAttribute('y', node.y + 18);
+                    loadText.setAttribute('fill', node.load < 0 ? '#f87171' : '#4ade80');
+                    loadText.setAttribute('font-size', '12');
+                    loadText.textContent = `${node.load} kN`;
+                    nodeGroup.appendChild(loadText);
+                }
+            });
+            svg.appendChild(nodeGroup);
+
+            if (state.pendingNode) {
+                const pending = getNodeById(state.pendingNode);
+                if (pending) {
+                    const indicator = document.createElementNS(svgNS, 'circle');
+                    indicator.setAttribute('cx', pending.x);
+                    indicator.setAttribute('cy', pending.y);
+                    indicator.setAttribute('r', 13);
+                    indicator.setAttribute('fill', 'transparent');
+                    indicator.setAttribute('stroke', '#38bdf8');
+                    indicator.setAttribute('stroke-width', '2');
+                    indicator.setAttribute('stroke-dasharray', '6 4');
+                    svg.appendChild(indicator);
+                }
+            }
+        }
+
+        document.querySelectorAll('.tool-btn').forEach(button => {
+            button.addEventListener('click', () => setTool(button.dataset.tool));
+        });
+
+        document.getElementById('analyzeBtn').addEventListener('click', () => {
+            analyzeTruss();
+            render();
+            updateInspectionPanel();
+        });
+        document.getElementById('toggleInspectBtn').addEventListener('click', toggleInspectPanel);
+        document.getElementById('closeInspectBtn').addEventListener('click', toggleInspectPanel);
+        document.getElementById('resetBtn').addEventListener('click', resetState);
+        document.getElementById('exampleBtn').addEventListener('click', loadExample);
+        svg.addEventListener('click', handleCanvasClick);
+
+        loadExample();
+        setTool('select');
+        panel.classList.add('open');
     </script>
 </body>
 </html>
